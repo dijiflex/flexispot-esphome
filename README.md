@@ -4,11 +4,11 @@ ESPHome component for FlexiSpot standing desks (E7 Pro / E7 Pro Plus / LoctekMot
 
 Built for the **XIAO ESP32C6** with a bi-directional logic level shifter. Targets the E7 Pro's HS13M-1C0 controller, which has known issues with existing community integrations.
 
-> **Status:** Hardware verified, UART communication confirmed. Custom ESPHome component in development.
+> **Status:** Working. Height sensor, preset commands (Stand/Sit/1/2), and manual Up/Down all tested on E7 Pro Plus + HS13M-1C0 + CB38M2L.
 
 ## What's Different
 
-Existing projects ([iMicknl/LoctekMotion_IoT](https://github.com/iMicknl/LoctekMotion_IoT), forks) often report that E7 Pro desks read height but ignore movement commands. Root causes identified through [deep research](docs/research-findings.md):
+Existing projects ([iMicknl/LoctekMotion_IoT](https://github.com/iMicknl/LoctekMotion_IoT), forks) often report that E7 Pro desks read height but ignore movement commands. Root causes identified through deep research:
 
 1. **Wake timing** - Controller requires PIN 20 held HIGH for 1 full second (not 200ms)
 2. **Poll/response protocol** - Controller sends `0x11` polls every ~40ms expecting `0x02` button-state replies. Fire-and-forget commands get ignored.
@@ -81,7 +81,7 @@ cd esphome/
 cp secrets.yaml.example secrets.yaml
 # Edit secrets.yaml with your WiFi credentials
 esphome compile office-desk.yaml
-esphome upload office-desk.yaml --device COM5 # or /dev/ttyACM0
+esphome upload office-desk.yaml --device COM5  # or /dev/ttyACM0
 ```
 
 ### 2. Connect to Home Assistant
@@ -91,6 +91,40 @@ The device auto-discovers via mDNS. Go to **Settings > Devices > Add Integration
 ### 3. Plug In
 
 Insert the RJ45 cable into the desk control box's **spare port** (not the one the keypad uses).
+
+## Configuration
+
+### Height Unit
+
+The height sensor reads the display digits directly, so it reports whatever unit your desk is set to. The component defaults to `cm`. If your desk displays inches, override it in your YAML:
+
+```yaml
+sensor:
+  - platform: flexispot_desk
+    name: "Desk Height"
+    unit_of_measurement: "in"  # for desks set to inches
+```
+
+### Available Entities
+
+| Entity | Type | Description |
+|--------|------|-------------|
+| Desk Height | Sensor | Current height from the 7-segment display |
+| Stand | Button | Move to standing preset |
+| Sit | Button | Move to sitting preset |
+| Preset 1 | Button | Move to memory preset 1 |
+| Preset 2 | Button | Move to memory preset 2 |
+| Up | Button | Nudge up (~5 seconds) |
+| Down | Button | Nudge down (~5 seconds) |
+| Memory | Button | Enter memory/save mode |
+
+Up/Down are short nudges, not continuous hold. The physical keypad always works for manual control and can override any programmatic command.
+
+## Example Use Cases
+
+- **Health break enforcement** - pair with a timer automation to auto-raise the desk after prolonged sitting
+- **Scene integration** - raise to standing when "work mode" activates, lower for "meeting mode"
+- **Sit/stand tracking** - log height over time to track daily standing ratio
 
 ## Compatibility
 
@@ -102,6 +136,18 @@ Insert the RJ45 cable into the desk control box's **spare port** (not the one th
 - Any desk with the standard `9B ... 9D` packet protocol on 9600 baud RJ45
 
 **ESP32 boards:** Designed for XIAO ESP32C6 but adaptable to any ESP32 variant. Adjust pin assignments in the YAML config. If using a 5V-tolerant board (some ESP32 DevKits), the level shifter may be optional, though it's recommended for reliability.
+
+## How It Works
+
+The component implements a 5-state machine that emulates a keypad on the desk's spare RJ45 port:
+
+1. **BOOT** - 10s delay for controller startup, then sends M command to get initial height
+2. **IDLE** - Sends periodic "no buttons pressed" packets to maintain bus presence
+3. **WAKING_LOW** - Pulls PIN 20 LOW for 100ms to create a rising edge
+4. **WAKING_HIGH** - Holds PIN 20 HIGH for 1.1s (required by E7 Pro before accepting commands)
+5. **ACTIVE** - Responds to controller's `0x11` polls with button-state packets encoding the requested command
+
+Commands are only sent as responses to controller polls, not fire-and-forget. This matches the keypad scan conversation the controller expects. The physical keypad on the primary port continues to work normally.
 
 ## Protocol Reference
 
@@ -117,9 +163,9 @@ The desk uses a proprietary UART protocol at 9600 baud (8N1) over RJ45.
 
 | Type | Direction | Purpose |
 |------|-----------|---------|
-| `0x11` | Controller → Keypad | Status poll (~40ms interval) |
-| `0x12` | Controller → Keypad | Height display data (3 bytes, 7-segment encoded) |
-| `0x02` | Keypad → Controller | Button state response |
+| `0x11` | Controller -> Keypad | Status poll (~40ms interval) |
+| `0x12` | Controller -> Keypad | Height display data (3 bytes, 7-segment encoded) |
+| `0x02` | Keypad -> Controller | Button state response |
 
 ### Command Bytes
 
@@ -139,15 +185,19 @@ The desk uses a proprietary UART protocol at 9600 baud (8N1) over RJ45.
 ```
 flexispot-esphome/
 ├── components/
-│ └── flexispot_desk/ # ESPHome external component
+│   └── flexispot_desk/       # ESPHome external component
+│       ├── __init__.py        # Component registration
+│       ├── sensor.py          # Height sensor platform
+│       ├── button.py          # Button platform (7 commands)
+│       ├── flexispot_desk.h   # State machine, packets, constants
+│       └── flexispot_desk.cpp # Implementation
 ├── esphome/
-│ ├── office-desk.yaml # Example ESPHome config
-│ └── secrets.yaml.example
+│   ├── office-desk.yaml       # Example config (XIAO ESP32C6)
+│   ├── office-desk-debug.yaml # UART debug config (raw hex logging)
+│   └── secrets.yaml.example
 ├── docs/
-│ ├── protocol.md # Detailed protocol analysis
-│ ├── research-findings.md # Deep research on E7 Pro issues
-│ └── images/
-│ └── wiring-diagram.html
+│   └── images/
+│       └── wiring-diagram.html
 └── README.md
 ```
 

@@ -1,8 +1,9 @@
 substitutions:
   name: office-desk
-  tx_pin: GPIO16
-  rx_pin: GPIO17
-  screen_pin: GPIO2
+  friendly_name: "Office Desk"
+  tx_pin: GPIO16   # D6 → LV1 → HV1 → Pin 6 Green (Commands IN to desk)
+  rx_pin: GPIO17   # D7 ← LV2 ← HV2 ← Pin 5 Wht-Blue (Height OUT from desk)
+  wake_pin: GPIO2  # D2 → LV3 → HV3 → Pin 4 Blue (PIN 20 Wake)
 
 esp32:
   board: esp32-c6-devkitc-1
@@ -12,15 +13,17 @@ esp32:
 
 esphome:
   name: ${name}
-  friendly_name: "Office Desk"
-  on_boot:
-    priority: -100
-    then:
-      - delay: 10s
-      - logger.log: "Boot complete — UART monitoring active"
+  friendly_name: ${friendly_name}
+
+external_components:
+  - source:
+      type: local
+      path: ../components
 
 logger:
   level: DEBUG
+  logs:
+    flexispot_desk: DEBUG
 
 api:
   encryption:
@@ -42,36 +45,68 @@ web_server:
   port: 80
 
 uart:
-  - id: desk_uart
-    baud_rate: 9600
-    tx_pin: ${tx_pin}
-    rx_pin: ${rx_pin}
-    debug:
-      direction: BOTH
-      dummy_receiver: true
-      after:
-        timeout: 50ms
-      sequence:
-        - lambda: UARTDebug::log_hex(direction, bytes, ':');
+  id: desk_uart
+  baud_rate: 9600
+  tx_pin: ${tx_pin}
+  rx_pin: ${rx_pin}
+  rx_buffer_size: 256
 
-switch:
-  - platform: gpio
-    name: "PIN 20 Wake"
-    id: pin20_wake
-    pin:
-      number: ${screen_pin}
-      mode: OUTPUT
-    restore_mode: ALWAYS_ON
-    entity_category: config
+flexispot_desk:
+  id: my_desk
+  uart_id: desk_uart
+  wake_pin:
+    number: ${wake_pin}
+    mode: OUTPUT
 
 sensor:
+  - platform: flexispot_desk
+    flexispot_desk_id: my_desk
+    name: "Desk Height"
+    id: desk_height
+    icon: "mdi:desk"
+    unit_of_measurement: "in"  # desk display set to inches; use "cm" for metric
+    filters:
+      - filter_out: 0.0
+
   - platform: wifi_signal
     name: "WiFi Signal"
     update_interval: 60s
+
   - platform: uptime
     name: "Uptime"
 
 button:
+  - platform: flexispot_desk
+    flexispot_desk_id: my_desk
+    stand:
+      name: "Stand"
+      id: desk_stand
+      icon: "mdi:human-handsup"
+    sit:
+      name: "Sit"
+      id: desk_sit
+      icon: "mdi:chair-rolling"
+    preset_1:
+      name: "Preset 1"
+      id: desk_preset_1
+      icon: "mdi:numeric-1-box"
+    preset_2:
+      name: "Preset 2"
+      id: desk_preset_2
+      icon: "mdi:numeric-2-box"
+    up:
+      name: "Up"
+      id: desk_up
+      icon: "mdi:arrow-up-bold"
+    down:
+      name: "Down"
+      id: desk_down
+      icon: "mdi:arrow-down-bold"
+    memory:
+      name: "Memory"
+      id: desk_memory
+      icon: "mdi:alpha-m-circle"
+
   - platform: restart
     name: "Restart"
     entity_category: config
