@@ -6,9 +6,26 @@ Built for the **XIAO ESP32C6** with a bi-directional logic level shifter. Target
 
 > **Status:** Working. Height sensor, preset commands (Stand/Sit/1/2), and manual Up/Down all tested on E7 Pro Plus + HS13M-1C0 + CB38M2L.
 
+## Use Cases
+
+- **Health break enforcement** - pair with a timer automation to auto-raise the desk after prolonged sitting
+- **Scene integration** - raise to standing when "work mode" activates, lower for "meeting mode"
+- **Sit/stand tracking** - log height over time to track daily standing ratio
+
+## Compatibility
+
+**Tested on:**
+- FlexiSpot E7 Pro Plus (HS13M-1C0 keypad, CB38M2L control box)
+
+**Should work with:**
+- FlexiSpot E7, E7 Pro, E7Q, E5, E6, E8 and other LoctekMotion-based desks
+- Any desk with the standard `9B ... 9D` packet protocol on 9600 baud RJ45
+
+**ESP32 boards:** Designed for XIAO ESP32C6 but adaptable to any ESP32 variant. Adjust pin assignments in the YAML config. If using a 5V-tolerant board (some ESP32 DevKits), the level shifter may be optional, though it's recommended for reliability.
+
 ## What's Different
 
-Existing projects ([iMicknl/LoctekMotion_IoT](https://github.com/iMicknl/LoctekMotion_IoT), forks) often report that E7 Pro desks read height but ignore movement commands. Root causes identified through deep research:
+Existing projects ([iMicknl/LoctekMotion_IoT](https://github.com/iMicknl/LoctekMotion_IoT), forks) often report that E7 Pro desks read height but ignore movement commands. Root causes identified:
 
 1. **Wake timing** - Controller requires PIN 20 held HIGH for 1 full second (not 200ms)
 2. **Poll/response protocol** - Controller sends `0x11` polls every ~40ms expecting `0x02` button-state replies. Fire-and-forget commands get ignored.
@@ -24,16 +41,19 @@ This component addresses all three with proper wake sequencing, a poll-aware sta
 |------|-------|--------|
 | Seeed Studio XIAO ESP32C6 | ~$7 | [Seeed Studio](https://www.seeedstudio.com) |
 | SparkFun Logic Level Converter (BOB-12009) | ~$5 | [SparkFun](https://www.sparkfun.com/sparkfun-logic-level-converter-bi-directional.html) / Amazon |
-| Cat 6 Ethernet cable (any length) | ~$3 | Any retailer |
-| RJ45 pass-through connector | ~$0.10 | Amazon (bulk packs) |
+| Short ethernet patch cable (any Cat5/5e/6) | ~$3 | Any retailer |
 
-**Tools needed:** Soldering iron, RJ45 crimper, wire strippers
+The easiest approach is to buy a cheap pre-made patch cable and cut one end off. Any Cat5, Cat5e, or Cat6 cable works - you just need the copper pairs inside. This way you skip the crimper and RJ45 connectors entirely.
+
+**Tools needed:** Soldering iron, wire strippers
 
 **Total cost:** ~$15
 
 ### Wiring
 
-Open [`docs/images/wiring-diagram.html`](docs/images/wiring-diagram.html) in a browser for the full color-coded diagram.
+![Wiring Diagram](docs/images/wiring-diagram.png)
+
+The [interactive HTML version](docs/images/wiring-diagram.html) has the same diagram with selectable text.
 
 #### Quick Reference
 
@@ -53,15 +73,33 @@ D2 / GPIO2 ───────► LV3 ─── ch3 ── HV3 ─────
 
 **Unused wires:** Pins 1 (White-Orange), 2 (Orange), 3 (White-Green) - cut short and insulate.
 
-**Power during testing:** Leave the 5V line disconnected; power the XIAO via USB-C. Connect 5V for permanent deployment only.
+**Power:** During testing, leave the 5V line disconnected and power the XIAO via USB-C. For permanent deployment, connect the desk's 5V (Pin 8) to the XIAO's 5V pad. Both can be connected at the same time safely.
 
 ### Assembly
 
-1. Crimp an RJ45 plug on one end of the Cat 6 cable
-2. Cut the other end, strip ~2cm of jacket, expose the 5 needed wires
-3. Solder the 5 desk wires to the HV side of the level shifter (see table below)
-4. Solder 5 short wires from the XIAO's castellated pads to the LV side
-5. Connect XIAO 3V3 to the LV reference pin
+1. Cut one end off the patch cable, strip ~2cm of jacket, expose the 5 needed wires
+2. Solder the 5 desk wires to the HV side of the level shifter (see table below)
+3. Solder 5 short wires from the XIAO's castellated pads to the LV side
+4. Connect XIAO 3V3 to the LV reference pin
+
+About 30 minutes of soldering total, even if you're new to it.
+
+<details>
+<summary>Build photos</summary>
+
+**Patch cable to level shifter** - 5 wires from the cut cable soldered to the HV side, heat shrink over the splice:
+
+![Cable to level shifter](docs/images/build-1-cable-to-shifter.jpg)
+
+**Level shifter to XIAO** - LV side wires connecting the SparkFun board to the XIAO ESP32C6:
+
+![Shifter to XIAO](docs/images/build-2-shifter-to-xiao.jpg)
+
+**Full setup powered via USB-C** - ready for testing (connect 5V from desk for permanent deployment):
+
+![Full setup](docs/images/build-3-full-setup.jpg)
+
+</details>
 
 | Level Shifter Pad | Desk Wire (HV side) | XIAO Pad (LV side) |
 |--------------------|---------------------|---------------------|
@@ -119,23 +157,6 @@ sensor:
 | Memory | Button | Enter memory/save mode |
 
 Up/Down are short nudges, not continuous hold. The physical keypad always works for manual control and can override any programmatic command.
-
-## Example Use Cases
-
-- **Health break enforcement** - pair with a timer automation to auto-raise the desk after prolonged sitting
-- **Scene integration** - raise to standing when "work mode" activates, lower for "meeting mode"
-- **Sit/stand tracking** - log height over time to track daily standing ratio
-
-## Compatibility
-
-**Tested on:**
-- FlexiSpot E7 Pro Plus (HS13M-1C0 keypad, CB38M2L control box)
-
-**Should work with:**
-- FlexiSpot E7, E7 Pro, E7Q, E5, E6, E8 and other LoctekMotion-based desks
-- Any desk with the standard `9B ... 9D` packet protocol on 9600 baud RJ45
-
-**ESP32 boards:** Designed for XIAO ESP32C6 but adaptable to any ESP32 variant. Adjust pin assignments in the YAML config. If using a 5V-tolerant board (some ESP32 DevKits), the level shifter may be optional, though it's recommended for reliability.
 
 ## How It Works
 
@@ -197,7 +218,8 @@ flexispot-esphome/
 │   └── secrets.yaml.example
 ├── docs/
 │   └── images/
-│       └── wiring-diagram.html
+│       ├── wiring-diagram.html
+│       └── wiring-diagram.png
 └── README.md
 ```
 
