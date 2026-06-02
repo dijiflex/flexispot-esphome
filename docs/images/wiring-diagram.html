@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { margin: 0; padding: 20px; background: #1a1a2e; font-family: 'Segoe UI', system-ui, sans-serif; }
+  svg { display: block; margin: 0 auto; }
+  .component-bg { fill: #16213e; stroke: #0f3460; stroke-width: 2; rx: 8; }
+  .component-label { fill: #e94560; font-size: 14px; font-weight: 700; text-anchor: middle; }
+  .sub-label { fill: #a0a0b8; font-size: 10px; text-anchor: middle; }
+  .pin-label { font-size: 11px; fill: #e0e0e0; font-weight: 600; }
+  .pin-label-dim { font-size: 9px; fill: #808098; }
+  .pin-dot { r: 4; }
+  .wire { stroke-width: 2.5; fill: none; stroke-linecap: round; }
+  .wire-power { stroke: #e74c3c; }
+  .wire-gnd { stroke: #2c3e50; stroke-dasharray: 6,3; }
+  .wire-tx { stroke: #f39c12; }
+  .wire-rx { stroke: #2ecc71; }
+  .wire-wake { stroke: #9b59b6; }
+  .wire-ref { stroke: #3498db; stroke-dasharray: 4,2; }
+  .legend-text { fill: #c0c0d0; font-size: 11px; }
+  .note-text { fill: #808098; font-size: 10px; font-style: italic; }
+  .title-text { fill: #e94560; font-size: 20px; font-weight: 700; text-anchor: middle; }
+  .section-label { fill: #0f3460; font-size: 12px; font-weight: 600; text-anchor: middle; }
+</style>
+</head>
+<body>
+<svg viewBox="0 0 900 620" width="900" height="620">
+
+  <!-- Title -->
+  <text x="450" y="30" class="title-text">FlexiSpot E7 Pro + XIAO ESP32C6 Wiring</text>
+  <text x="450" y="48" class="note-text" text-anchor="middle">via SparkFun BSS138 Bi-Directional Logic Level Shifter</text>
+
+  <!-- ======== XIAO ESP32C6 (Left) ======== -->
+  <rect x="30" y="100" width="200" height="340" class="component-bg"/>
+  <text x="130" y="125" class="component-label">XIAO ESP32C6</text>
+  <text x="130" y="140" class="sub-label">Seeed Studio | 3.3V Logic</text>
+
+  <!-- XIAO pins - left column -->
+  <circle cx="55" cy="180" class="pin-dot" fill="#f39c12"/>
+  <text x="68" y="184" class="pin-label">D6 / GPIO16</text>
+  <text x="160" y="184" class="pin-label-dim">TX</text>
+
+  <circle cx="55" cy="250" class="pin-dot" fill="#9b59b6"/>
+  <text x="68" y="254" class="pin-label">D2 / GPIO2</text>
+  <text x="155" y="254" class="pin-label-dim">Wake</text>
+
+  <!-- XIAO pins - right column -->
+  <circle cx="205" cy="180" class="pin-dot" fill="#e74c3c"/>
+  <text x="192" y="184" class="pin-label" text-anchor="end">5V</text>
+
+  <circle cx="205" cy="210" class="pin-dot" fill="#2c3e50"/>
+  <text x="192" y="214" class="pin-label" text-anchor="end">GND</text>
+
+  <circle cx="205" cy="240" class="pin-dot" fill="#3498db"/>
+  <text x="192" y="244" class="pin-label" text-anchor="end">3V3</text>
+
+  <circle cx="205" cy="340" class="pin-dot" fill="#2ecc71"/>
+  <text x="192" y="344" class="pin-label" text-anchor="end">D7 / GPIO17</text>
+  <text x="120" y="344" class="pin-label-dim">RX</text>
+
+  <!-- USB-C indicator -->
+  <rect x="105" y="395" width="50" height="25" rx="4" fill="#333" stroke="#555" stroke-width="1"/>
+  <text x="130" y="413" fill="#888" font-size="9" text-anchor="middle">USB-C</text>
+  <text x="130" y="433" class="note-text" text-anchor="middle">For flashing &amp; debug</text>
+
+  <!-- ======== LEVEL SHIFTER (Center) ======== -->
+  <rect x="340" y="100" width="220" height="340" class="component-bg"/>
+  <text x="450" y="125" class="component-label">Level Shifter</text>
+  <text x="450" y="140" class="sub-label">SparkFun BOB-12009 | BSS138</text>
+
+  <!-- LV side header -->
+  <rect x="355" y="155" width="80" height="20" rx="3" fill="#1a4a7a" stroke="none"/>
+  <text x="395" y="169" fill="#3498db" font-size="10" font-weight="600" text-anchor="middle">LV (3.3V)</text>
+
+  <!-- LV pins -->
+  <circle cx="365" cy="200" class="pin-dot" fill="#3498db"/>
+  <text x="378" y="204" class="pin-label">LV</text>
+  <text x="405" y="204" class="pin-label-dim">ref</text>
+
+  <circle cx="365" cy="235" class="pin-dot" fill="#2c3e50"/>
+  <text x="378" y="239" class="pin-label">GND</text>
+
+  <circle cx="365" cy="275" class="pin-dot" fill="#f39c12"/>
+  <text x="378" y="279" class="pin-label">LV1</text>
+  <text x="410" y="279" class="pin-label-dim">ch1</text>
+
+  <circle cx="365" cy="315" class="pin-dot" fill="#2ecc71"/>
+  <text x="378" y="319" class="pin-label">LV2</text>
+  <text x="410" y="319" class="pin-label-dim">ch2</text>
+
+  <circle cx="365" cy="355" class="pin-dot" fill="#9b59b6"/>
+  <text x="378" y="359" class="pin-label">LV3</text>
+  <text x="410" y="359" class="pin-label-dim">ch3</text>
+
+  <circle cx="365" cy="395" class="pin-dot" fill="#555"/>
+  <text x="378" y="399" class="pin-label" fill="#666">LV4</text>
+  <text x="410" y="399" class="pin-label-dim">n/c</text>
+
+  <!-- HV side header -->
+  <rect x="465" y="155" width="80" height="20" rx="3" fill="#7a1a1a" stroke="none"/>
+  <text x="505" y="169" fill="#e74c3c" font-size="10" font-weight="600" text-anchor="middle">HV (5V)</text>
+
+  <!-- HV pins -->
+  <circle cx="535" cy="200" class="pin-dot" fill="#e74c3c"/>
+  <text x="522" y="204" class="pin-label" text-anchor="end">HV</text>
+  <text x="493" y="204" class="pin-label-dim">ref</text>
+
+  <circle cx="535" cy="235" class="pin-dot" fill="#2c3e50"/>
+  <text x="522" y="239" class="pin-label" text-anchor="end">GND</text>
+
+  <circle cx="535" cy="275" class="pin-dot" fill="#f39c12"/>
+  <text x="522" y="279" class="pin-label" text-anchor="end">HV1</text>
+  <text x="490" y="279" class="pin-label-dim">ch1</text>
+
+  <circle cx="535" cy="315" class="pin-dot" fill="#2ecc71"/>
+  <text x="522" y="319" class="pin-label" text-anchor="end">HV2</text>
+  <text x="490" y="319" class="pin-label-dim">ch2</text>
+
+  <circle cx="535" cy="355" class="pin-dot" fill="#9b59b6"/>
+  <text x="522" y="359" class="pin-label" text-anchor="end">HV3</text>
+  <text x="490" y="359" class="pin-label-dim">ch3</text>
+
+  <circle cx="535" cy="395" class="pin-dot" fill="#555"/>
+  <text x="522" y="399" class="pin-label" text-anchor="end" fill="#666">HV4</text>
+  <text x="490" y="399" class="pin-label-dim">n/c</text>
+
+  <!-- Bidirectional arrows in center -->
+  <text x="450" y="279" fill="#555" font-size="16" text-anchor="middle">&harr;</text>
+  <text x="450" y="319" fill="#555" font-size="16" text-anchor="middle">&harr;</text>
+  <text x="450" y="359" fill="#555" font-size="16" text-anchor="middle">&harr;</text>
+
+  <!-- ======== DESK CABLE (Right) ======== -->
+  <rect x="660" y="100" width="220" height="340" class="component-bg"/>
+  <text x="770" y="125" class="component-label">Desk RJ45 Cable</text>
+  <text x="770" y="140" class="sub-label">Cat 6 | T568B | 5V Logic</text>
+
+  <!-- Desk pins — labels from CONTROLLER perspective -->
+  <circle cx="685" cy="200" class="pin-dot" fill="#e74c3c"/>
+  <text x="698" y="204" class="pin-label">Pin 8</text>
+  <text x="742" y="204" class="pin-label-dim">Brown</text>
+  <text x="810" y="204" class="pin-label" fill="#e74c3c">+5V</text>
+
+  <circle cx="685" cy="235" class="pin-dot" fill="#2c3e50"/>
+  <text x="698" y="239" class="pin-label">Pin 7</text>
+  <text x="742" y="239" class="pin-label-dim">Wht-Brn</text>
+  <text x="810" y="239" class="pin-label" fill="#666">GND</text>
+
+  <circle cx="685" cy="275" class="pin-dot" fill="#f39c12"/>
+  <text x="698" y="279" class="pin-label">Pin 6</text>
+  <text x="742" y="279" class="pin-label-dim">Green</text>
+  <text x="830" y="279" class="pin-label" fill="#f39c12">Cmds IN</text>
+
+  <circle cx="685" cy="315" class="pin-dot" fill="#2ecc71"/>
+  <text x="698" y="319" class="pin-label">Pin 5</text>
+  <text x="742" y="319" class="pin-label-dim">Wht-Blu</text>
+  <text x="830" y="319" class="pin-label" fill="#2ecc71">Height OUT</text>
+
+  <circle cx="685" cy="355" class="pin-dot" fill="#9b59b6"/>
+  <text x="698" y="359" class="pin-label">Pin 4</text>
+  <text x="742" y="359" class="pin-label-dim">Blue</text>
+  <text x="810" y="359" class="pin-label" fill="#9b59b6">PIN 20</text>
+
+  <!-- Unused pins -->
+  <text x="698" y="398" class="pin-label-dim">Pin 3, 2, 1 — not connected</text>
+
+  <!-- RJ45 plug indicator -->
+  <rect x="735" y="405" width="70" height="25" rx="4" fill="#333" stroke="#555" stroke-width="1"/>
+  <text x="770" y="422" fill="#888" font-size="9" text-anchor="middle">RJ45 plug</text>
+  <text x="770" y="438" class="note-text" text-anchor="middle">Into desk spare port</text>
+
+  <!-- ======== WIRES: XIAO → Level Shifter (LV side) ======== -->
+
+  <!-- 3V3 ref → LV -->
+  <path d="M 205,240 C 280,240 290,200 365,200" class="wire wire-ref"/>
+
+  <!-- GND → GND -->
+  <path d="M 205,210 C 280,210 290,235 365,235" class="wire wire-gnd"/>
+
+  <!-- D6/TX → LV1 -->
+  <path d="M 55,180 L 35,180 L 35,275 C 35,275 200,275 365,275" class="wire wire-tx"/>
+
+  <!-- D7/RX → LV2 -->
+  <path d="M 205,340 C 280,340 290,315 365,315" class="wire wire-rx"/>
+
+  <!-- D2/Wake → LV3 -->
+  <path d="M 55,250 L 40,250 L 40,355 C 40,355 200,355 365,355" class="wire wire-wake"/>
+
+  <!-- ======== WIRES: Level Shifter (HV side) → Desk ======== -->
+
+  <!-- HV → Pin 8 (+5V) -->
+  <path d="M 535,200 C 610,200 620,200 685,200" class="wire wire-power"/>
+
+  <!-- GND → Pin 7 -->
+  <path d="M 535,235 C 610,235 620,235 685,235" class="wire wire-gnd"/>
+
+  <!-- HV1 (TX/commands) → Pin 6 (Green, controller receives commands) -->
+  <path d="M 535,275 C 590,275 620,275 685,275" class="wire wire-tx"/>
+
+  <!-- HV2 (RX/height) → Pin 5 (Wht-Blue, controller sends height data) -->
+  <path d="M 535,315 C 590,315 620,315 685,315" class="wire wire-rx"/>
+
+  <!-- HV3 → Pin 4 (PIN 20) -->
+  <path d="M 535,355 C 610,355 620,355 685,355" class="wire wire-wake"/>
+
+  <!-- ======== POWER: XIAO 5V → Desk 5V (deployment only) ======== -->
+  <path d="M 205,180 L 230,180 L 230,80 L 660,80 L 660,200 L 685,200"
+        class="wire" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.5"/>
+  <text x="430" y="74" class="note-text" text-anchor="middle">
+    Deployment only: connect XIAO 5V to desk +5V (skip during USB testing)
+  </text>
+
+  <!-- ======== LEGEND ======== -->
+  <rect x="30" y="480" width="840" height="120" rx="8" fill="#111128" stroke="#0f3460" stroke-width="1"/>
+  <text x="60" y="505" fill="#e94560" font-size="13" font-weight="700">LEGEND</text>
+
+  <line x1="60" y1="525" x2="100" y2="525" class="wire wire-tx"/>
+  <text x="110" y="529" class="legend-text">TX / Commands (XIAO D6 → LV1 → HV1 → Pin 6 Green)</text>
+
+  <line x1="60" y1="550" x2="100" y2="550" class="wire wire-rx"/>
+  <text x="110" y="554" class="legend-text">RX / Height Data (Pin 5 Wht-Blue → HV2 → LV2 → XIAO D7)</text>
+
+  <line x1="60" y1="575" x2="100" y2="575" class="wire wire-wake"/>
+  <text x="110" y="579" class="legend-text">Wake / PIN 20 (XIAO D2 → LV3 → HV3 → Pin 4 Blue)</text>
+
+  <line x1="470" y1="525" x2="510" y2="525" class="wire wire-power"/>
+  <text x="520" y="529" class="legend-text">+5V Power</text>
+
+  <line x1="470" y1="550" x2="510" y2="550" class="wire wire-gnd"/>
+  <text x="520" y="554" class="legend-text">Ground</text>
+
+  <line x1="470" y1="575" x2="510" y2="575" class="wire wire-ref"/>
+  <text x="520" y="579" class="legend-text">3.3V Reference (to level shifter LV)</text>
+
+</svg>
+</body>
+</html>
