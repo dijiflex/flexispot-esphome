@@ -29,9 +29,9 @@ Existing projects ([iMicknl/LoctekMotion_IoT](https://github.com/iMicknl/LoctekM
 
 1. **Wake timing** - Controller requires PIN 20 held HIGH for 1 full second, not 200ms.
 2. **Poll/response protocol** - Controller sends `0x11` polls every ~40ms expecting `0x02` button-state replies. Fire-and-forget commands get ignored.
-3. **Voltage levels** - ESP32's 3.3V output may not register as HIGH on the desk's 5V CMOS logic.
+3. **Voltage levels** - The desk's logic level hasn't been publicly documented. If it runs at 5V, ESP32's 3.3V output would be marginal.
 
-This component addresses all three with proper wake sequencing, a poll-aware state machine, and a level shifter in the reference design.
+This component addresses #1 and #2 in software with proper wake sequencing and a poll-aware state machine. The reference design includes a level shifter for #3, though it may not be strictly required (see note below).
 
 ## Hardware
 
@@ -40,8 +40,11 @@ This component addresses all three with proper wake sequencing, a poll-aware sta
 | Part | Price | Source |
 |------|-------|--------|
 | Seeed Studio XIAO ESP32C6 | ~$7 | [Seeed Studio](https://www.seeedstudio.com) |
-| SparkFun Logic Level Converter (BOB-12009) | ~$5 | [SparkFun](https://www.sparkfun.com/sparkfun-logic-level-converter-bi-directional.html) / Amazon |
+| SparkFun Logic Level Converter (BOB-12009)* | ~$5 | [SparkFun](https://www.sparkfun.com/sparkfun-logic-level-converter-bi-directional.html) / Amazon |
 | Short ethernet patch cable (any Cat5/5e/6) | ~$3 | Any retailer |
+
+> [!TIP]
+> **The level shifter may not be strictly required.** Community reports suggest several CB38M2L setups work fine with a 3.3V ESP32 wired directly, and at least one measurement of the data lines showed ~3V, not 5V. I haven't verified this on my own unit — I included the shifter to eliminate voltage as a variable so I could get everything working in one sitting. At ~$5 there's no real downside, but you could try without it first and add one later if needed.
 
 The easiest wiring approach is to buy a cheap pre-made patch cable and cut one end off. Any Cat5, Cat5e, or Cat6 cable works. You skip the crimper and RJ45 connectors entirely.
 
@@ -85,7 +88,7 @@ D2 / GPIO2 ───────► LV3 ─── ch3 ── HV3 ─────
 About 30 minutes of soldering total, even if you're new to it.
 
 <details>
-<summary>Build photos</summary>
+<summary>📷 Build photos</summary>
 
 **Patch cable to level shifter** - 5 wires from the cut cable soldered to the HV side, heat shrink over the splice:
 
