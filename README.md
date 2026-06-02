@@ -35,30 +35,59 @@ This component addresses #1 and #2 in software with proper wake sequencing and a
 
 ## Hardware
 
-### Bill of Materials
+### Quick Start (No Soldering)
+
+If you want to get this running as fast as possible, you don't need a soldering iron. Three parts, about 10 minutes of assembly:
+
+| Part | Price | Source |
+|------|-------|--------|
+| Seeed Studio XIAO ESP32C6 (**pre-soldered** version) | ~$7 | [Amazon](https://www.amazon.com/s?k=XIAO+ESP32C6) / [Seeed Studio](https://www.seeedstudio.com) |
+| Mini breadboard (170 tie points) | ~$1 | [Amazon](https://www.amazon.com/dp/B09YXQJMTG) |
+| Cat6 ethernet patch cable (standard, **not slim/flat**) | ~$4 | [Amazon](https://www.amazon.com/dp/B00N2VISLW) |
+
+**Total cost:** ~$12. No level shifter, no jumper wires, no tools beyond wire strippers.
+
+> [!IMPORTANT]
+> Get a **standard round Cat6** cable, not a slim or flat one. Cat6 uses 23 AWG solid-core conductors that push directly into breadboard holes. Slim/flat cables use thinner stranded wire that won't grip.
+
+**Assembly:** Cut one end off the patch cable, strip ~2cm of jacket, and push the 5 needed wires directly into the breadboard rows next to the matching XIAO pins:
+
+![Breadboard Wiring](docs/images/breadboard-wiring.png)
+
+| Cat6 Wire (T568B) | RJ45 Pin | XIAO Pin | Signal |
+|--------------------|----------|----------|--------|
+| White-Brown | Pin 7 | GND | Ground |
+| Brown | Pin 8 | 5V | Power (connect after testing with USB) |
+| Green | Pin 6 | D6 / GPIO16 | Commands to desk (TX) |
+| White-Blue | Pin 5 | D7 / GPIO17 | Height from desk (RX) |
+| Blue | Pin 4 | D2 / GPIO2 | PIN 20 Wake |
+
+**Unused wires:** White-Orange (Pin 1), Orange (Pin 2), White-Green (Pin 3) - cut short or tuck aside.
+
+**Power:** During testing, leave the Brown (5V) wire disconnected and power the XIAO via USB-C. For permanent deployment, push the Brown wire into the 5V row. Both can be connected at the same time safely.
+
+Plug the RJ45 end into the desk control box's **spare port** (not the one the keypad uses). That's it.
+
+### Soldered Build (with Level Shifter)
+
+For a more permanent setup, or if the breadboard version has signal issues, add a logic level shifter between the ESP and the desk:
 
 | Part | Price | Source |
 |------|-------|--------|
 | Seeed Studio XIAO ESP32C6 | ~$7 | [Seeed Studio](https://www.seeedstudio.com) |
-| SparkFun Logic Level Converter (BOB-12009)* | ~$5 | [SparkFun](https://www.sparkfun.com/sparkfun-logic-level-converter-bi-directional.html) / Amazon |
+| SparkFun Logic Level Converter (BOB-12009) | ~$5 | [SparkFun](https://www.sparkfun.com/sparkfun-logic-level-converter-bi-directional.html) / Amazon |
 | Short ethernet patch cable (any Cat5/5e/6) | ~$3 | Any retailer |
 
 > [!TIP]
-> **The level shifter may not be strictly required.** Community reports suggest several CB38M2L setups work fine with a 3.3V ESP32 wired directly, and at least one measurement of the data lines showed ~3V, not 5V. I haven't verified this on my own unit — I included the shifter to eliminate voltage as a variable so I could get everything working in one sitting. At ~$5 there's no real downside, but you could try without it first and add one later if needed.
-
-The easiest wiring approach is to buy a cheap pre-made patch cable and cut one end off. Any Cat5, Cat5e, or Cat6 cable works. You skip the crimper and RJ45 connectors entirely.
+> **The level shifter may not be strictly required.** Community reports suggest several CB38M2L setups work fine with a 3.3V ESP32 wired directly, and at least one measurement of the data lines showed ~3V, not 5V. I included the shifter to eliminate voltage as a variable. At ~$5 there's no real downside, but the breadboard version above works without it.
 
 **Tools needed:** Soldering iron, wire strippers
 
 **Total cost:** ~$15
 
-### Wiring
+#### Wiring
 
 ![Wiring Diagram](docs/images/wiring-diagram.png)
-
-The [interactive HTML version](docs/images/wiring-diagram.html) has the same diagram with selectable text.
-
-#### Quick Reference
 
 ```
 XIAO ESP32C6 Level Shifter (BOB-12009) Desk RJ45 (T568B)
@@ -72,13 +101,7 @@ D2 / GPIO2 ───────► LV3 ─── ch3 ── HV3 ─────
 5V (deploy) ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ► Pin 8 Brown +5V
 ```
 
-**Signal directions:** Arrows show data flow. Commands go from ESP to desk (Pin 6). Height data comes from desk to ESP (Pin 5). Wake goes from ESP to desk (Pin 4).
-
-**Unused wires:** Pins 1 (White-Orange), 2 (Orange), 3 (White-Green) - cut short and insulate.
-
-**Power:** During testing, leave the 5V line disconnected and power the XIAO via USB-C. For permanent deployment, connect the desk's 5V (Pin 8) to the XIAO's 5V pad. Both can be connected at the same time safely.
-
-### Assembly
+#### Assembly
 
 1. Cut one end off the patch cable, strip ~2cm of jacket, expose the 5 needed wires
 2. Solder the 5 desk wires to the HV side of the level shifter (see table below)
@@ -114,7 +137,19 @@ About 30 minutes of soldering total, even if you're new to it.
 
 ## Installation
 
-### 1. Flash ESPHome
+### Option A: Use as External Component (recommended)
+
+Add this to your own ESPHome YAML — no need to clone the repo:
+
+```yaml
+external_components:
+  - source: github://dimitri-vs/flexispot-esphome@main
+    components: [ flexispot_desk ]
+```
+
+Then configure the component as shown in the [Configuration](#configuration) section below. See `esphome/office-desk.yaml` in this repo for a complete working example.
+
+### Option B: Clone and Flash
 
 ```bash
 pip install esphome
@@ -221,8 +256,9 @@ flexispot-esphome/
 │   └── secrets.yaml.example
 ├── docs/
 │   └── images/
+│       ├── breadboard-wiring.png  # No-solder breadboard diagram
 │       ├── wiring-diagram.html
-│       └── wiring-diagram.png
+│       └── wiring-diagram.png     # Soldered build with level shifter
 └── README.md
 ```
 
