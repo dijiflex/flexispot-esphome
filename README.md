@@ -25,11 +25,11 @@ Built for the **XIAO ESP32C6** with a bi-directional logic level shifter. Target
 
 ## What's Different
 
-Existing projects ([iMicknl/LoctekMotion_IoT](https://github.com/iMicknl/LoctekMotion_IoT), forks) often report that E7 Pro desks read height but ignore movement commands. Root causes identified:
+Existing projects ([iMicknl/LoctekMotion_IoT](https://github.com/iMicknl/LoctekMotion_IoT), forks) often report that E7 Pro desks read height but ignore movement commands. Three root causes:
 
-1. **Wake timing** - Controller requires PIN 20 held HIGH for 1 full second (not 200ms)
+1. **Wake timing** - Controller requires PIN 20 held HIGH for 1 full second, not 200ms.
 2. **Poll/response protocol** - Controller sends `0x11` polls every ~40ms expecting `0x02` button-state replies. Fire-and-forget commands get ignored.
-3. **Voltage levels** - ESP32's 3.3V output may not register as HIGH on the desk's 5V CMOS logic
+3. **Voltage levels** - ESP32's 3.3V output may not register as HIGH on the desk's 5V CMOS logic.
 
 This component addresses all three with proper wake sequencing, a poll-aware state machine, and a level shifter in the reference design.
 
@@ -43,7 +43,7 @@ This component addresses all three with proper wake sequencing, a poll-aware sta
 | SparkFun Logic Level Converter (BOB-12009) | ~$5 | [SparkFun](https://www.sparkfun.com/sparkfun-logic-level-converter-bi-directional.html) / Amazon |
 | Short ethernet patch cable (any Cat5/5e/6) | ~$3 | Any retailer |
 
-The easiest approach is to buy a cheap pre-made patch cable and cut one end off. Any Cat5, Cat5e, or Cat6 cable works - you just need the copper pairs inside. This way you skip the crimper and RJ45 connectors entirely.
+The easiest wiring approach is to buy a cheap pre-made patch cable and cut one end off. Any Cat5, Cat5e, or Cat6 cable works. You skip the crimper and RJ45 connectors entirely.
 
 **Tools needed:** Soldering iron, wire strippers
 
