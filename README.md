@@ -1,8 +1,8 @@
 # flexispot-esphome
 
-ESPHome component for FlexiSpot standing desks (E7 Pro / E7 Pro Plus / LoctekMotion). Full programmatic control — presets, up/down, height sensor — via the desk's RJ45 serial interface.
+ESPHome component for FlexiSpot standing desks (E7 Pro / E7 Pro Plus / LoctekMotion). Full programmatic control - presets, up/down, height sensor - via the desk's RJ45 serial interface.
 
-Built for the **XIAO ESP32C6** with a bi-directional logic level shifter. Designed specifically for the E7 Pro's HS13M-1C0 controller, which has known issues with existing community integrations.
+Built for the **XIAO ESP32C6** with a bi-directional logic level shifter. Targets the E7 Pro's HS13M-1C0 controller, which has known issues with existing community integrations.
 
 > **Status:** Hardware verified, UART communication confirmed. Custom ESPHome component in development.
 
@@ -10,9 +10,9 @@ Built for the **XIAO ESP32C6** with a bi-directional logic level shifter. Design
 
 Existing projects ([iMicknl/LoctekMotion_IoT](https://github.com/iMicknl/LoctekMotion_IoT), forks) often report that E7 Pro desks read height but ignore movement commands. Root causes identified through [deep research](docs/research-findings.md):
 
-1. **Wake timing** — Controller requires PIN 20 held HIGH for 1 full second (not 200ms)
-2. **Poll/response protocol** — Controller sends `0x11` polls every ~40ms expecting `0x02` button-state replies. Fire-and-forget commands get ignored.
-3. **Voltage levels** — ESP32's 3.3V output may not register as HIGH on the desk's 5V CMOS logic
+1. **Wake timing** - Controller requires PIN 20 held HIGH for 1 full second (not 200ms)
+2. **Poll/response protocol** - Controller sends `0x11` polls every ~40ms expecting `0x02` button-state replies. Fire-and-forget commands get ignored.
+3. **Voltage levels** - ESP32's 3.3V output may not register as HIGH on the desk's 5V CMOS logic
 
 This component addresses all three with proper wake sequencing, a poll-aware state machine, and a level shifter in the reference design.
 
@@ -38,20 +38,20 @@ Open [`docs/images/wiring-diagram.html`](docs/images/wiring-diagram.html) in a b
 #### Quick Reference
 
 ```
-XIAO ESP32C6          Level Shifter (BOB-12009)          Desk RJ45 (T568B)
-─────────────         ───────────────────────            ─────────────────
-3V3          ───────► LV (ref)
-GND          ───────► GND (LV)        GND (HV) ◄─────── Pin 7  Wht-Brown  GND
-                                      HV (ref) ◄─────── Pin 8  Brown      +5V
-D6 / GPIO16  ───────► LV1 ─── ch1 ── HV1      ───────► Pin 6  Green      Commands IN
-D7 / GPIO17  ◄─────── LV2 ─── ch2 ── HV2      ◄─────── Pin 5  Wht-Blue   Height OUT
-D2 / GPIO2   ───────► LV3 ─── ch3 ── HV3      ───────► Pin 4  Blue       PIN 20 Wake
-5V (deploy)  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ► Pin 8  Brown      +5V
+XIAO ESP32C6 Level Shifter (BOB-12009) Desk RJ45 (T568B)
+───────────── ─────────────────────── ─────────────────
+3V3 ───────► LV (ref)
+GND ───────► GND (LV) GND (HV) ◄─────── Pin 7 Wht-Brown GND
+ HV (ref) ◄─────── Pin 8 Brown +5V
+D6 / GPIO16 ───────► LV1 ─── ch1 ── HV1 ───────► Pin 6 Green Commands IN
+D7 / GPIO17 ◄─────── LV2 ─── ch2 ── HV2 ◄─────── Pin 5 Wht-Blue Height OUT
+D2 / GPIO2 ───────► LV3 ─── ch3 ── HV3 ───────► Pin 4 Blue PIN 20 Wake
+5V (deploy) ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ► Pin 8 Brown +5V
 ```
 
 **Signal directions:** Arrows show data flow. Commands go from ESP to desk (Pin 6). Height data comes from desk to ESP (Pin 5). Wake goes from ESP to desk (Pin 4).
 
-**Unused wires:** Pins 1 (White-Orange), 2 (Orange), 3 (White-Green) — cut short and insulate.
+**Unused wires:** Pins 1 (White-Orange), 2 (Orange), 3 (White-Green) - cut short and insulate.
 
 **Power during testing:** Leave the 5V line disconnected; power the XIAO via USB-C. Connect 5V for permanent deployment only.
 
@@ -65,11 +65,11 @@ D2 / GPIO2   ───────► LV3 ─── ch3 ── HV3      ──�
 
 | Level Shifter Pad | Desk Wire (HV side) | XIAO Pad (LV side) |
 |--------------------|---------------------|---------------------|
-| HV / LV (ref) | Pin 8 — Brown (+5V) | 3V3 |
-| GND | Pin 7 — White-Brown | GND |
-| HV1 / LV1 | Pin 6 — Green | D6 (GPIO16, TX) |
-| HV2 / LV2 | Pin 5 — White-Blue | D7 (GPIO17, RX) |
-| HV3 / LV3 | Pin 4 — Blue | D2 (GPIO2) |
+| HV / LV (ref) | Pin 8 - Brown (+5V) | 3V3 |
+| GND | Pin 7 - White-Brown | GND |
+| HV1 / LV1 | Pin 6 - Green | D6 (GPIO16, TX) |
+| HV2 / LV2 | Pin 5 - White-Blue | D7 (GPIO17, RX) |
+| HV3 / LV3 | Pin 4 - Blue | D2 (GPIO2) |
 
 ## Installation
 
@@ -81,7 +81,7 @@ cd esphome/
 cp secrets.yaml.example secrets.yaml
 # Edit secrets.yaml with your WiFi credentials
 esphome compile office-desk.yaml
-esphome upload office-desk.yaml --device COM5  # or /dev/ttyACM0
+esphome upload office-desk.yaml --device COM5 # or /dev/ttyACM0
 ```
 
 ### 2. Connect to Home Assistant
@@ -101,7 +101,7 @@ Insert the RJ45 cable into the desk control box's **spare port** (not the one th
 - FlexiSpot E7, E7 Pro, E7Q, E5, E6, E8 and other LoctekMotion-based desks
 - Any desk with the standard `9B ... 9D` packet protocol on 9600 baud RJ45
 
-**ESP32 boards:** Designed for XIAO ESP32C6 but adaptable to any ESP32 variant. Adjust pin assignments in the YAML config. If using a 5V-tolerant board (some ESP32 DevKits), the level shifter may be optional — but we recommend it for reliability.
+**ESP32 boards:** Designed for XIAO ESP32C6 but adaptable to any ESP32 variant. Adjust pin assignments in the YAML config. If using a 5V-tolerant board (some ESP32 DevKits), the level shifter may be optional, though it's recommended for reliability.
 
 ## Protocol Reference
 
@@ -139,25 +139,25 @@ The desk uses a proprietary UART protocol at 9600 baud (8N1) over RJ45.
 ```
 flexispot-esphome/
 ├── components/
-│   └── flexispot_desk/       # ESPHome external component
+│ └── flexispot_desk/ # ESPHome external component
 ├── esphome/
-│   ├── office-desk.yaml      # Example ESPHome config
-│   └── secrets.yaml.example
+│ ├── office-desk.yaml # Example ESPHome config
+│ └── secrets.yaml.example
 ├── docs/
-│   ├── protocol.md           # Detailed protocol analysis
-│   ├── research-findings.md  # Deep research on E7 Pro issues
-│   └── images/
-│       └── wiring-diagram.html
+│ ├── protocol.md # Detailed protocol analysis
+│ ├── research-findings.md # Deep research on E7 Pro issues
+│ └── images/
+│ └── wiring-diagram.html
 └── README.md
 ```
 
 ## References
 
-- [iMicknl/LoctekMotion_IoT](https://github.com/iMicknl/LoctekMotion_IoT) — Original reverse engineering project
-- [NelsonBrandao/flexispot-e7-esphome](https://github.com/NelsonBrandao/flexispot-e7-esphome) — 3-state polling machine
-- [takahashikenichi/flexispot-e7pro-nesson1](https://github.com/takahashikenichi/flexispot-e7pro-nesson1) — Confirmed E7 Pro + HS13M-1C0 control
-- [Ideal Reality E7 Pro Analysis](https://ideal-reality.com) — Poll/response protocol documentation
-- [PR #139](https://github.com/iMicknl/LoctekMotion_IoT/pull/139) — Wake-before-action fix for newer desks
+- [iMicknl/LoctekMotion_IoT](https://github.com/iMicknl/LoctekMotion_IoT) - Original reverse engineering project
+- [NelsonBrandao/flexispot-e7-esphome](https://github.com/NelsonBrandao/flexispot-e7-esphome) - 3-state polling machine
+- [takahashikenichi/flexispot-e7pro-nesson1](https://github.com/takahashikenichi/flexispot-e7pro-nesson1) - Confirmed E7 Pro + HS13M-1C0 control
+- [Ideal Reality E7 Pro Analysis](https://ideal-reality.com) - Poll/response protocol documentation
+- [PR #139](https://github.com/iMicknl/LoctekMotion_IoT/pull/139) - Wake-before-action fix for newer desks
 
 ## License
 
