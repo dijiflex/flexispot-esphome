@@ -4,6 +4,7 @@
 #include "esphome/core/gpio.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/button/button.h"
+#include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/uart/uart.h"
 
 namespace esphome {
@@ -57,9 +58,13 @@ class FlexiSpotDesk : public Component, public uart::UARTDevice {
 
   void set_wake_pin(GPIOPin *pin) { this->wake_pin_ = pin; }
   void set_height_sensor(sensor::Sensor *sensor) { this->height_sensor_ = sensor; }
+  void set_height_valid_sensor(binary_sensor::BinarySensor *s) { this->height_valid_sensor_ = s; }
+  void set_height_valid_timeout(uint32_t ms) { this->height_valid_timeout_ms_ = ms; }
   void set_nudge_duration(uint32_t ms) { this->nudge_duration_ms_ = ms; }
   void set_preset_hold(uint32_t ms) { this->preset_hold_ms_ = ms; }
   void set_boot_memory_command(bool enabled) { this->boot_memory_command_ = enabled; }
+  void set_answer_all_polls(bool enabled) { this->answer_all_polls_ = enabled; }
+  void set_preset_guard(uint32_t ms) { this->preset_guard_ms_ = ms; }
 
   void request_command(CommandIndex cmd);
   void stop_command();
@@ -67,6 +72,7 @@ class FlexiSpotDesk : public Component, public uart::UARTDevice {
  protected:
   GPIOPin *wake_pin_{nullptr};
   sensor::Sensor *height_sensor_{nullptr};
+  binary_sensor::BinarySensor *height_valid_sensor_{nullptr};
 
   DeskState state_{DeskState::BOOT};
   bool wake_pin_high_{false};
@@ -103,6 +109,28 @@ class FlexiSpotDesk : public Component, public uart::UARTDevice {
   // next preset command can overwrite that preset instead of recalling it.
   bool boot_memory_command_{true};
 
+  // Reply "no key pressed" to every poll, like the real keypad, instead of
+  // only sending the idle frame on a 3 s timer. Cannot move the desk or arm
+  // anything. Defaults false to preserve previous behaviour.
+  bool answer_all_polls_{false};
+
+  // How long after the boot M command to refuse preset/memory commands.
+  // M arms preset-save mode, so a preset arriving in that window can SAVE the
+  // current height instead of recalling it. Up/Down are unaffected - they are
+  // not preset keys and cannot trigger a save.
+  uint32_t preset_guard_ms_{0};
+  uint32_t preset_guard_until_{0};
+
+  // The box keeps sending 0x12 frames while its display sleeps, but with a
+  // blank payload. Without this, the height sensor silently holds its last
+  // value forever - measured 9.6 in wrong for minutes on a real desk. Anything
+  // reading height must be able to tell 'the desk has not moved' from 'we
+  // cannot see the desk'.
+  uint32_t height_valid_timeout_ms_{0};
+  uint32_t last_real_height_ms_{0};
+  bool height_valid_{false};
+  bool height_valid_published_{false};
+
   void read_uart_();
   void process_packet_();
   void handle_height_packet_();
@@ -112,6 +140,7 @@ class FlexiSpotDesk : public Component, public uart::UARTDevice {
   int decode_7seg_(uint8_t byte);
   bool has_decimal_(uint8_t byte);
   bool is_continuous_command_(int cmd);
+  void update_height_validity_();
 };
 
 class DeskButton : public button::Button, public Component {
@@ -129,6 +158,11 @@ class DeskButton : public button::Button, public Component {
 };
 
 class DeskHeightSensor : public sensor::Sensor, public Component {
+ public:
+  void dump_config() override {}
+};
+
+class DeskHeightValidBinarySensor : public binary_sensor::BinarySensor, public Component {
  public:
   void dump_config() override {}
 };
