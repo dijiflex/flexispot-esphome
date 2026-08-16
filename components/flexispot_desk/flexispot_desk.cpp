@@ -38,6 +38,9 @@ void FlexiSpotDesk::dump_config() {
   ESP_LOGCONFIG(TAG, "  Nudge duration: %u ms", this->nudge_duration_ms_);
   ESP_LOGCONFIG(TAG, "  Preset hold: %u ms", this->preset_hold_ms_);
   ESP_LOGCONFIG(TAG, "  Memory command on boot: %s", YESNO(this->boot_memory_command_));
+  ESP_LOGCONFIG(TAG, "  Answer all polls: %s", YESNO(this->answer_all_polls_));
+  ESP_LOGCONFIG(TAG, "  Post-boot preset guard: %u ms", this->preset_guard_ms_);
+  ESP_LOGCONFIG(TAG, "  Height stale after: %u ms", this->height_valid_timeout_ms_);
   if (this->height_sensor_ != nullptr) {
     LOG_SENSOR("  ", "Height", this->height_sensor_);
   }
@@ -47,6 +50,7 @@ void FlexiSpotDesk::loop() {
   uint32_t now = millis();
 
   this->read_uart_();
+  this->update_height_validity_();
 
   switch (this->state_) {
     case DeskState::BOOT:
@@ -55,12 +59,32 @@ void FlexiSpotDesk::loop() {
           ESP_LOGI(TAG, "Boot delay complete, sending initial M command");
           const uint8_t m_cmd[] = {0x9B, 0x06, 0x02, 0x20, 0x00, 0xAC, 0xB8, 0x9D};
           this->send_packet_(m_cmd, sizeof(m_cmd));
+          if (this->preset_guard_ms_ > 0) {
+            this->preset_guard_until_ = millis() + this->preset_guard_ms_;
+            ESP_LOGI(TAG, "Preset commands refused for the next %u ms (M arms save mode)",
+                     this->preset_guard_ms_);
+          }
+          this->last_idle_send_ = millis();
+          this->transition_to_(DeskState::IDLE);
         } else {
-          ESP_LOGI(TAG, "Boot delay complete, sending idle frame (memory command disabled)");
+          // Wake the display with the PIN 20 pulse instead of a key press.
+          // The box reports 0x00 0x00 0x00 for height while the display is
+          // asleep, so something must wake it - but M arms preset-save mode.
+          // Toggling the wake pin cannot arm anything: no frame is sent, and
+          // pending_command_ stays -1 so ACTIVE transmits nothing and times out
+          // back to IDLE on its own.
+          ESP_LOGI(TAG, "Boot delay complete, pulsing wake pin (memory command disabled)");
           this->send_packet_(IDLE_PACKET, sizeof(IDLE_PACKET));
+          this->last_idle_send_ = millis();
+          if (this->wake_pin_ != nullptr) {
+            this->wake_pin_->digital_write(false);
+            this->wake_pin_high_ = false;
+            this->wake_low_start_ = millis();
+            this->transition_to_(DeskState::WAKING_LOW);
+          } else {
+            this->transition_to_(DeskState::IDLE);
+          }
         }
-        this->last_idle_send_ = millis();
-        this->transition_to_(DeskState::IDLE);
       }
       break;
 
@@ -114,6 +138,19 @@ void FlexiSpotDesk::request_command(CommandIndex cmd) {
   if (cmd >= CMD_COUNT) {
     ESP_LOGW(TAG, "Invalid command index: %d", cmd);
     return;
+  }
+
+  // A preset arriving while the box is still armed by the boot M command would
+  // SAVE the current height into that preset instead of recalling it. Up/Down
+  // are not preset keys, so they are allowed through.
+  if (this->preset_guard_until_ != 0 && !this->is_continuous_command_(cmd)) {
+    uint32_t now_ms = millis();
+    if (now_ms < this->preset_guard_until_) {
+      ESP_LOGW(TAG, "Refusing command %d: %u ms of post-boot preset guard remaining", cmd,
+               this->preset_guard_until_ - now_ms);
+      return;
+    }
+    this->preset_guard_until_ = 0;
   }
 
   ESP_LOGI(TAG, "Command requested: %d", cmd);
@@ -189,6 +226,12 @@ void FlexiSpotDesk::handle_poll_packet_() {
   if (this->state_ == DeskState::ACTIVE && this->pending_command_ >= 0) {
     ESP_LOGV(TAG, "Poll -> command %d", this->pending_command_);
     this->send_packet_(COMMANDS[this->pending_command_].data, 8);
+  } else if (this->answer_all_polls_) {
+    // Answer every poll with "no key pressed", exactly as the real keypad does
+    // (~25/s). The box reports 0x00 0x00 0x00 for height while its display is
+    // asleep; a keypad that only replies occasionally may not be enough to keep
+    // it awake. This frame cannot move the desk or arm preset-save mode.
+    this->send_packet_(IDLE_PACKET, sizeof(IDLE_PACKET));
   }
 }
 
@@ -217,6 +260,8 @@ void FlexiSpotDesk::handle_height_packet_() {
   }
 
   if (d1 == 0 && d2 == 0 && d3 == 0) return;
+
+  this->last_real_height_ms_ = millis();
 
   int raw = d1 * 100 + d2 * 10 + d3;
   float height;
@@ -284,6 +329,32 @@ int FlexiSpotDesk::decode_7seg_(uint8_t byte) {
 
 bool FlexiSpotDesk::has_decimal_(uint8_t byte) {
   return (byte & 0x80) != 0;
+}
+
+void FlexiSpotDesk::update_height_validity_() {
+  // Valid means "a real digit frame arrived recently". While the desk's display
+  // sleeps the box sends a blank payload, so without this the height sensor
+  // would keep reporting a value that may be minutes old and badly wrong.
+  bool valid = this->last_real_height_ms_ != 0 &&
+               (millis() - this->last_real_height_ms_) < this->height_valid_timeout_ms_;
+
+  if (this->height_valid_timeout_ms_ == 0) return;  // feature disabled
+
+  if (valid == this->height_valid_ && this->height_valid_published_) return;
+
+  this->height_valid_ = valid;
+  this->height_valid_published_ = true;
+
+  if (!valid) {
+    ESP_LOGI(TAG, "Height is stale - the desk's display is asleep, no reading for %u ms",
+             this->height_valid_timeout_ms_);
+  } else {
+    ESP_LOGI(TAG, "Height is live again");
+  }
+
+  if (this->height_valid_sensor_ != nullptr) {
+    this->height_valid_sensor_->publish_state(valid);
+  }
 }
 
 bool FlexiSpotDesk::is_continuous_command_(int cmd) {
