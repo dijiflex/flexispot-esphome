@@ -37,6 +37,7 @@ void FlexiSpotDesk::dump_config() {
   ESP_LOGCONFIG(TAG, "  Wake pin configured: %s", this->wake_pin_ != nullptr ? "yes" : "no");
   ESP_LOGCONFIG(TAG, "  Nudge duration: %u ms", this->nudge_duration_ms_);
   ESP_LOGCONFIG(TAG, "  Preset hold: %u ms", this->preset_hold_ms_);
+  ESP_LOGCONFIG(TAG, "  Memory command on boot: %s", YESNO(this->boot_memory_command_));
   if (this->height_sensor_ != nullptr) {
     LOG_SENSOR("  ", "Height", this->height_sensor_);
   }
@@ -50,9 +51,15 @@ void FlexiSpotDesk::loop() {
   switch (this->state_) {
     case DeskState::BOOT:
       if (now - this->boot_time_ >= BOOT_DELAY_MS) {
-        ESP_LOGI(TAG, "Boot delay complete, sending initial M command");
-        const uint8_t m_cmd[] = {0x9B, 0x06, 0x02, 0x20, 0x00, 0xAC, 0xB8, 0x9D};
-        this->send_packet_(m_cmd, sizeof(m_cmd));
+        if (this->boot_memory_command_) {
+          ESP_LOGI(TAG, "Boot delay complete, sending initial M command");
+          const uint8_t m_cmd[] = {0x9B, 0x06, 0x02, 0x20, 0x00, 0xAC, 0xB8, 0x9D};
+          this->send_packet_(m_cmd, sizeof(m_cmd));
+        } else {
+          ESP_LOGI(TAG, "Boot delay complete, sending idle frame (memory command disabled)");
+          this->send_packet_(IDLE_PACKET, sizeof(IDLE_PACKET));
+        }
+        this->last_idle_send_ = millis();
         this->transition_to_(DeskState::IDLE);
       }
       break;
