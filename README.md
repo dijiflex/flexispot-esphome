@@ -190,11 +190,37 @@ sensor:
 | Sit | Button | Move to sitting preset |
 | Preset 1 | Button | Move to memory preset 1 |
 | Preset 2 | Button | Move to memory preset 2 |
-| Up | Button | Nudge up (~5 seconds) |
-| Down | Button | Nudge down (~5 seconds) |
+| Up | Button | Nudge up (`nudge_duration`, default 5 s) |
+| Down | Button | Nudge down (`nudge_duration`, default 5 s) |
 | Memory | Button | Enter memory/save mode |
 
 Up/Down are short nudges, not continuous hold. The physical keypad always works for manual control and can override any programmatic command.
+
+### Command Timing
+
+How long a button is held on the bus is configurable. Both options are optional and default to
+the values that were previously hardcoded, so existing configs are unaffected.
+
+```yaml
+flexispot_desk:
+  id: my_desk
+  uart_id: desk_uart
+  wake_pin:
+    number: GPIO4
+    mode: OUTPUT
+  nudge_duration: 400ms   # Up/Down hold time (default 5000ms)
+  preset_hold: 1000ms     # Stand/Sit/Preset/Memory hold time (default 1000ms)
+```
+
+A 5-second nudge is a long way on a desk: measured on an E7 Plus (`CB38M2L(IB)-1` +
+`HS13M-1C0`) at 25 mm/s, one tap of Up travelled **4.6 inches / 117 mm of commanded motion**.
+Shorten `nudge_duration` for finer control.
+
+Note when tuning: the control box keeps driving after the last held-key frame. On the same desk
+that overrun measured **0.29 s going down and 1.4 s going up**, at close to full speed — so total
+travel per tap is meaningfully longer than `nudge_duration` alone, and asymmetric by direction.
+
+Both values are printed at boot by `dump_config`.
 
 ## How It Works
 
