@@ -74,15 +74,16 @@ void FlexiSpotDesk::loop() {
           // Toggling the wake pin cannot arm anything: no frame is sent, and
           // pending_command_ stays -1 so ACTIVE transmits nothing and times out
           // back to IDLE on its own.
-          ESP_LOGI(TAG, "Boot delay complete, pulsing wake pin (memory command disabled)");
           this->send_packet_(IDLE_PACKET, sizeof(IDLE_PACKET));
           this->last_idle_send_ = millis();
           if (this->wake_pin_ != nullptr) {
+            ESP_LOGI(TAG, "Boot delay complete, pulsing wake pin (memory command disabled)");
             this->wake_pin_->digital_write(false);
             this->wake_pin_high_ = false;
             this->wake_low_start_ = millis();
             this->transition_to_(DeskState::WAKING_LOW);
           } else {
+            ESP_LOGI(TAG, "Boot delay complete, sent idle frame (memory command disabled, no wake pin)");
             this->transition_to_(DeskState::IDLE);
           }
         }
@@ -264,8 +265,6 @@ void FlexiSpotDesk::handle_height_packet_() {
 
   if (d1 == 0 && d2 == 0 && d3 == 0) return;
 
-  this->last_real_height_ms_ = millis();
-
   int raw = d1 * 100 + d2 * 10 + d3;
   float height;
   if (this->has_decimal_(d2_raw)) {
@@ -278,6 +277,11 @@ void FlexiSpotDesk::handle_height_packet_() {
     ESP_LOGD(TAG, "Height %.1f outside valid range, discarding", height);
     return;
   }
+
+  // Only stamp this once the reading has survived every check. Stamping earlier
+  // would let a glitched frame keep the validity flag true while its value is
+  // being discarded - exactly the false confidence the flag exists to prevent.
+  this->last_real_height_ms_ = millis();
 
   if (height != this->current_height_) {
     this->last_height_change_ = millis();
@@ -356,7 +360,8 @@ void FlexiSpotDesk::update_height_validity_() {
     if (!seen) {
       ESP_LOGI(TAG, "Height not known yet - no real reading received since boot");
     } else {
-      ESP_LOGI(TAG, "Height is stale - the desk's display is asleep, last reading %u ms ago", age);
+      ESP_LOGI(TAG, "Height is stale - no usable reading for %u ms (display asleep, or the link is down)",
+               age);
     }
   } else {
     ESP_LOGI(TAG, "Height is live again");
