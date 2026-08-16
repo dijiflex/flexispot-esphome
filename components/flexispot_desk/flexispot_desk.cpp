@@ -60,7 +60,8 @@ void FlexiSpotDesk::loop() {
           const uint8_t m_cmd[] = {0x9B, 0x06, 0x02, 0x20, 0x00, 0xAC, 0xB8, 0x9D};
           this->send_packet_(m_cmd, sizeof(m_cmd));
           if (this->preset_guard_ms_ > 0) {
-            this->preset_guard_until_ = millis() + this->preset_guard_ms_;
+            this->preset_guard_start_ = millis();
+            this->preset_guard_active_ = true;
             ESP_LOGI(TAG, "Preset commands refused for the next %u ms (M arms save mode)",
                      this->preset_guard_ms_);
           }
@@ -143,14 +144,16 @@ void FlexiSpotDesk::request_command(CommandIndex cmd) {
   // A preset arriving while the box is still armed by the boot M command would
   // SAVE the current height into that preset instead of recalling it. Up/Down
   // are not preset keys, so they are allowed through.
-  if (this->preset_guard_until_ != 0 && !this->is_continuous_command_(cmd)) {
-    uint32_t now_ms = millis();
-    if (now_ms < this->preset_guard_until_) {
+  if (this->preset_guard_active_ && !this->is_continuous_command_(cmd)) {
+    // Subtraction on unsigned millis() is wrap-safe; comparing against an
+    // absolute deadline is not.
+    uint32_t elapsed = millis() - this->preset_guard_start_;
+    if (elapsed < this->preset_guard_ms_) {
       ESP_LOGW(TAG, "Refusing command %d: %u ms of post-boot preset guard remaining", cmd,
-               this->preset_guard_until_ - now_ms);
+               this->preset_guard_ms_ - elapsed);
       return;
     }
-    this->preset_guard_until_ = 0;
+    this->preset_guard_active_ = false;
   }
 
   ESP_LOGI(TAG, "Command requested: %d", cmd);
@@ -335,10 +338,14 @@ void FlexiSpotDesk::update_height_validity_() {
   // Valid means "a real digit frame arrived recently". While the desk's display
   // sleeps the box sends a blank payload, so without this the height sensor
   // would keep reporting a value that may be minutes old and badly wrong.
-  bool valid = this->last_real_height_ms_ != 0 &&
-               (millis() - this->last_real_height_ms_) < this->height_valid_timeout_ms_;
+  bool seen = this->last_real_height_ms_ != 0;
+  uint32_t age = seen ? (millis() - this->last_real_height_ms_) : 0;
 
-  if (this->height_valid_timeout_ms_ == 0) return;  // feature disabled
+  // With the timeout disabled the flag still reports something honest - whether
+  // a real reading has ever arrived - rather than sitting at unknown forever.
+  bool valid = this->height_valid_timeout_ms_ == 0
+                   ? seen
+                   : (seen && age < this->height_valid_timeout_ms_);
 
   if (valid == this->height_valid_ && this->height_valid_published_) return;
 
@@ -346,8 +353,11 @@ void FlexiSpotDesk::update_height_validity_() {
   this->height_valid_published_ = true;
 
   if (!valid) {
-    ESP_LOGI(TAG, "Height is stale - the desk's display is asleep, no reading for %u ms",
-             this->height_valid_timeout_ms_);
+    if (!seen) {
+      ESP_LOGI(TAG, "Height not known yet - no real reading received since boot");
+    } else {
+      ESP_LOGI(TAG, "Height is stale - the desk's display is asleep, last reading %u ms ago", age);
+    }
   } else {
     ESP_LOGI(TAG, "Height is live again");
   }

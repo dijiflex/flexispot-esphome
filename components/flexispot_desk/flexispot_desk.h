@@ -119,7 +119,8 @@ class FlexiSpotDesk : public Component, public uart::UARTDevice {
   // current height instead of recalling it. Up/Down are unaffected - they are
   // not preset keys and cannot trigger a save.
   uint32_t preset_guard_ms_{0};
-  uint32_t preset_guard_until_{0};
+  uint32_t preset_guard_start_{0};
+  bool preset_guard_active_{false};
 
   // The box keeps sending 0x12 frames while its display sleeps, but with a
   // blank payload. Without this, the height sensor silently holds its last
