@@ -59,6 +59,7 @@ class FlexiSpotDesk : public Component, public uart::UARTDevice {
   void set_height_sensor(sensor::Sensor *sensor) { this->height_sensor_ = sensor; }
   void set_nudge_duration(uint32_t ms) { this->nudge_duration_ms_ = ms; }
   void set_preset_hold(uint32_t ms) { this->preset_hold_ms_ = ms; }
+  void set_boot_memory_command(bool enabled) { this->boot_memory_command_ = enabled; }
 
   void request_command(CommandIndex cmd);
   void stop_command();
@@ -95,6 +96,12 @@ class FlexiSpotDesk : public Component, public uart::UARTDevice {
   // Defaults match the values these had when they were `static const`.
   uint32_t preset_hold_ms_{1000};
   uint32_t nudge_duration_ms_{5000};
+
+  // Whether to send the M (memory) key once at boot to make the control box
+  // start broadcasting height. Defaults true to match previous behaviour.
+  // WARNING: on the E7 family a single M tap arms preset-save mode, so the
+  // next preset command can overwrite that preset instead of recalling it.
+  bool boot_memory_command_{true};
 
   void read_uart_();
   void process_packet_();

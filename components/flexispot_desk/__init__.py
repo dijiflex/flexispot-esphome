@@ -12,6 +12,7 @@ MULTI_CONF = False
 CONF_FLEXISPOT_DESK_ID = "flexispot_desk_id"
 CONF_WAKE_PIN = "wake_pin"
 CONF_NUDGE_DURATION = "nudge_duration"
+CONF_BOOT_MEMORY_COMMAND = "boot_memory_command"
 CONF_PRESET_HOLD = "preset_hold"
 
 flexispot_ns = cg.esphome_ns.namespace("flexispot_desk")
@@ -30,6 +31,7 @@ CONFIG_SCHEMA = (
             cv.Optional(
                 CONF_PRESET_HOLD, default="1000ms"
             ): cv.positive_time_period_milliseconds,
+            cv.Optional(CONF_BOOT_MEMORY_COMMAND, default=True): cv.boolean,
         }
     )
     .extend(uart.UART_DEVICE_SCHEMA)
@@ -57,3 +59,4 @@ async def to_code(config):
 
     cg.add(var.set_nudge_duration(config[CONF_NUDGE_DURATION].total_milliseconds))
     cg.add(var.set_preset_hold(config[CONF_PRESET_HOLD].total_milliseconds))
+    cg.add(var.set_boot_memory_command(config[CONF_BOOT_MEMORY_COMMAND]))
